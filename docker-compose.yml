@@ -1,0 +1,29 @@
+version: '3'
+services:
+  go-monitor:
+    build:
+      dockerfile: Dockerfile
+      context: ./go-monitor
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+      - influxdb
+    environment:
+      - REDIS_HOST=redis
+      - INFLUXDB_HOST=influxdb
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+  influxdb:
+    image: influxdb:latest
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+
+volumes:
+  influxdb-data:
