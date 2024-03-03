@@ -24,8 +24,8 @@ To install CS230 Go Monitor, follow these steps:
 Linux and macOS:
 
 ```bash
-git clone https://github.com/yourusername/cs230-go-monitor.git
-cd cs230-go-monitor
+git clone git@github.com:pingchenchan/cs230-winter24-project.git
+cd cs230-winter24-project
 ```
 
 ## Using CS230 Go Monitor
