@@ -5,8 +5,8 @@ docker-compose down
 # Start the services
 docker-compose up  &
 
-# # Wait for 10 seconds
-sleep 10
+# Wait for 10 seconds
+sleep 20
 
 # Stop the go-monitor-1 service
 docker-compose stop go-monitor-3

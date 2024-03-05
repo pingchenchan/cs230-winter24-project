@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 	"os"
 	"strconv"
 
@@ -25,7 +24,9 @@ var (
     nodes            map[int]*Node
     node             *Node
     leaderChangeChan chan struct{}
+
 )
+
 
 func main() {
 	fmt.Printf("success run:\n")
@@ -44,10 +45,13 @@ func main() {
     node  = nodes[monitorID]
 	
 	// Create a channel to signal when the leader changes
-
+	cli, redisClient, err := initClients()
+	if err != nil {
+		log.Fatalf("Error initializing clients: %v", err)
+	}
 	go monitorLeaderChanges(leaderChangeChan)
 
-    go startHealthCheck(leaderChangeChan)
+    go startHealthCheck(leaderChangeChan,redisClient)
 
 	
 
@@ -61,50 +65,14 @@ func main() {
      // Start the HTTP server
 	 log.Fatal(http.ListenAndServe(":8080", nil))
 
-	// init clients
-	// cli, redisClient, err := initClients()
-	// if err != nil {
-	// 	log.Fatalf("Error initializing clients: %v", err)
-	// }
-	// go manageContainers(cli, redisClient)
-	// startHTTPServer(cli) 
+	//init clients
+
+	go manageContainers(cli)
+	startHTTPServer(cli) 
 	}
 
 
-	func handleLeaderChange(w http.ResponseWriter, r *http.Request) {
-		// Check the ID of the leader
-		leaderID, err := strconv.Atoi(r.URL.Query().Get("leaderID"))
-		if err != nil {
-			http.Error(w, "Invalid leaderID", http.StatusBadRequest)
-			return
-		}
-		// Update the leader
-		for _, n := range nodes {
-			if n.ID == leaderID {
-				n.isLeader = true
-			} else {
-				n.isLeader = false
-			}
-		}
-		leaderChangeChan <- struct{}{} // Signal that the leader has changed
-		// Respond with an empty message
-		fmt.Fprint(w, "")
-	}
-	func handleElectionRequest(w http.ResponseWriter, r *http.Request) {
-		// Check the ID of the requesting node
-		requestingNodeID, err := strconv.Atoi(r.URL.Query().Get("requestingNodeID"))
-		if err != nil {
-			http.Error(w, "Invalid requestingNodeID", http.StatusBadRequest)
-			return
-		}
 	
-		// If the requesting node's ID is less than the current node's ID, respond with "OK"
-		if requestingNodeID < node.ID {
-			fmt.Fprint(w, "OK")
-		} else {
-			http.Error(w, "Not OK", http.StatusForbidden)
-		}
-	}
 func initClients() (*client.Client, *redis.Client, error) {
 	// Create a new Docker client
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -121,21 +89,21 @@ func initClients() (*client.Client, *redis.Client, error) {
 	return cli, redisClient, nil
 }
 
-func manageContainers(cli *client.Client, redisClient *redis.Client) {
-	ctx := context.Background()
+func manageContainers(cli *client.Client) {
+	// ctx := context.Background()
 	//start a new container every 10 seconds
-	go func() {
-		for range time.Tick(10 * time.Second) {
-			startContainer(ctx, cli, redisClient)
-		}
-	}()
+	// go func() {
+	// 	for range time.Tick(10 * time.Second) {
+	// 		startContainer(ctx, cli, redisClient)
+	// 	}
+	// }()
 
-	// stop the oldest container every 5 seconds
-	go func() {
-		for range time.Tick(5 * time.Second) {
-			stopOldestContainer(ctx, cli, redisClient)
-		}
-	}()
+	// // stop the oldest container every 5 seconds
+	// go func() {
+	// 	for range time.Tick(5 * time.Second) {
+	// 		stopOldestContainer(ctx, cli, redisClient)
+	// 	}
+	// }()
 }
 
 func startContainer(ctx context.Context, cli *client.Client, redisClient *redis.Client) {
