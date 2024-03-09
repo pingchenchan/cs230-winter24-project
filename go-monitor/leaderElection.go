@@ -5,9 +5,10 @@ import (
 	"time"
 	"strconv"
 	"github.com/redis/go-redis/v9"
+	"io"
 
 )
-func handleLeaderChange(w http.ResponseWriter, r *http.Request) {
+func handleLeaderChange(w http.ResponseWriter, r *http.Request, leaderChangeChan chan struct{}) {
 	// Check the ID of the leader
 	leaderID, err := strconv.Atoi(r.URL.Query().Get("leaderID"))
 	if err != nil {
@@ -36,7 +37,7 @@ func handleElectionRequest(w http.ResponseWriter, r *http.Request) {
 
 	// If the requesting node's ID is less than the current node's ID, respond with "OK"
 	if requestingNodeID < node.ID {
-		fmt.Fprint(w, "OK")
+		fmt.Fprintf(w, "OK, Leader is %d", findLeader().ID)
 	} else {
 		http.Error(w, "Not OK", http.StatusForbidden)
 	}
@@ -49,10 +50,13 @@ func monitorLeaderChanges(leaderChangeChan chan struct{}) {
         case <-leaderChangeChan:
             if stopChan != nil {
                 close(stopChan)
+                stopChan = nil
             }
 
             if node.isLeader {
-                stopChan = make(chan struct{})
+                if stopChan == nil {
+                    stopChan = make(chan struct{})
+                }
                 fmt.Printf("Node %d is the leader, start server\n", node.ID)
             }
         }
@@ -63,7 +67,7 @@ func startHealthCheck(leaderChangeChan chan struct{},redisClient *redis.Client) 
     for {
         for _, n := range nodes {
 			if n.isLeader{
-				fmt.Printf("Node ID: %d, Is Leader: %v\n", n.ID, n.isLeader)
+				fmt.Printf("Node ID: %d, Is Leader\n", n.ID)
 			}
             
         }
@@ -83,6 +87,7 @@ func healthCheck(node *Node , nodes map[int]*Node, leaderChangeChan chan struct{
 	// Check the health of the leader
 	leader := findLeader()
 	if leader == nil {
+		fmt.Print("No leader found, start a new election\n")
 		startElection(node,leaderChangeChan, redisClient )// No leader found, start a new election
 	}else{
 		// Check if the leader is alive
@@ -100,7 +105,7 @@ func healthCheck(node *Node , nodes map[int]*Node, leaderChangeChan chan struct{
 			startElection(node,leaderChangeChan,redisClient)
 		} else {
 			// Print health check result
-			fmt.Printf("Health check result success: %v\n", resp.StatusCode)
+			fmt.Printf("Health check  result success: %v\n", resp.StatusCode)
 			
 			if resp.StatusCode != http.StatusOK {
 				// Leader is not alive, start a new election
@@ -121,9 +126,38 @@ func startElection(node *Node, leaderChangeChan chan struct{},redisClient *redis
 			client := &http.Client{
 				Timeout: time.Second * 1,  // Set timeout to 5 seconds
 			}
-			resp, _ := client.Get(fmt.Sprintf("http://go-monitor-%d:8080/election?requestingNodeID=%d", n.ID, node.ID))
-			// if err == nil && resp.StatusCode == http.StatusOK {
-				if resp != nil {
+			resp, err := client.Get(fmt.Sprintf("http://go-monitor-%d:8080/election?requestingNodeID=%d", n.ID, node.ID))
+			//print received resp message
+			
+			if err != nil {
+				//2 cases, 1. node is not alive, 2. node ID less than current node
+				// Handle error
+				fmt.Printf("Error reading response body: %v\n", err)
+				// node.isLeader = false
+				// node.onElection = false
+				// return
+			}
+			
+			if  resp != nil && resp.StatusCode == http.StatusOK {//only higher ID node will respond with OK
+				body, _ := io.ReadAll(resp.Body)
+				fmt.Printf("received resp message: %v\n", string(body))
+				// if resp != nil {
+				// Parse the response to get the new leader ID
+				var leaderID int
+		
+				
+				fmt.Sscanf(string(body), "OK, Leader is %d", &leaderID)
+				//print the leaderID
+				fmt.Printf("received Leader ID: %v\n", leaderID)
+				//set new leader
+				for _, n := range nodes {
+					if n.ID == leaderID {
+						n.isLeader = true
+						fmt.Printf("New leader set to: %v\n", n.ID)
+					} else {
+						n.isLeader = false
+					}
+				}
 				///print election result
 				fmt.Printf("Election result loser: %v\n", resp.StatusCode)
 				// Received response from a higher ID node, revert to follower, and exit election
@@ -133,13 +167,13 @@ func startElection(node *Node, leaderChangeChan chan struct{},redisClient *redis
 			}
 
 		}
-	}
+	} 
 	// If no higher ID node responded, become the leader
 	node.isLeader = true
 	node.onElection = false
 	//print election result
 	fmt.Printf("Election result winner: %v\n", node.ID)
-	storeLeaderInRedis(node.ID, redisClient)
+	// go storeLeaderInRedis(node.ID, redisClient)
 	//update Nodes
 	for _, n := range nodes {
 		if n.ID != node.ID {
@@ -164,10 +198,10 @@ func startElection(node *Node, leaderChangeChan chan struct{},redisClient *redis
 	}
 }
 func findLeader() *Node {
-for _, node := range nodes {
-	if node.isLeader {
-		return node
+	for _, node := range nodes {
+		if node.isLeader {
+			return node
+		}
 	}
-}
-return nil
+	return nil
 }

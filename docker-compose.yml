@@ -1,15 +1,138 @@
 version: '3'
 services:
+
+  zookeeper:
+    container_name: zookeeper
+    image: quay.io/strimzi/kafka:0.28.0-kafka-3.1.0
+    command: [
+        "sh", "-c",
+        "bin/zookeeper-server-start.sh config/zookeeper.properties"
+      ]
+    ports:
+    - "2181:2181"
+    environment:
+      LOG_DIR: /tmp/logs
+
+  kafka:
+    container_name: kafka
+    image: quay.io/strimzi/kafka:0.28.0-kafka-3.1.0
+    command: [
+      "sh", "-c",
+      "bin/kafka-server-start.sh config/server.properties --override listeners=$${KAFKA_LISTENERS} --override advertised.listeners=$${KAFKA_ADVERTISED_LISTENERS} --override zookeeper.connect=$${KAFKA_ZOOKEEPER_CONNECT}"
+    ]
+    depends_on:
+    - zookeeper
+    ports:
+    - "9092:9092"
+    environment:
+      LOG_DIR: "/tmp/logs"
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092 
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+  influxdb:
+    image: influxdb:2.7.5
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=terrylin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=lin29717294
+      - DOCKER_INFLUXDB_INIT_ORG=cs230
+      - DOCKER_INFLUXDB_INIT_BUCKET=server
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=qE1J_1s3kLvjZJpjBKz9FtZSZ_zKqxZMOW6JEdTeDUvo8_nLUxGr7mQutPjtDAIONg68o35Dbe_5sQ2krnoUQg==
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+  telegraf:
+    image: telegraf:latest
+    container_name: telegraf
+    volumes:
+      - ./telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    depends_on:
+      - influxdb
+      - kafka
+    entrypoint: /bin/sh -c
+    command: >
+      "wget https://github.com/jwilder/dockerize/releases/download/v0.6.1/dockerize-linux-amd64-v0.6.1.tar.gz &&
+      tar -C /usr/local/bin -xzvf dockerize-linux-amd64-v0.6.1.tar.gz &&
+      rm dockerize-linux-amd64-v0.6.1.tar.gz &&
+      dockerize -wait tcp://kafka:9092 -timeout 30s &&
+      dockerize -wait http://influxdb:8086 -timeout 30s &&
+      telegraf" 
+    environment:
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_TOKEN: qE1J_1s3kLvjZJpjBKz9FtZSZ_zKqxZMOW6JEdTeDUvo8_nLUxGr7mQutPjtDAIONg68o35Dbe_5sQ2krnoUQg==
+      INFLUXDB_ORG: cs230
+      INFLUXDB_BUCKET: server
+  flask_app1:
+    build:
+      dockerfile: Dockerfile
+      context: ./app
+    ports:
+      - "5001:5001"
+    depends_on:
+      - kafka
+    entrypoint: /bin/sh -c
+    command: >
+      "wget https://github.com/jwilder/dockerize/releases/download/v0.6.1/dockerize-linux-amd64-v0.6.1.tar.gz &&
+      tar -C /usr/local/bin -xzvf dockerize-linux-amd64-v0.6.1.tar.gz &&
+      rm dockerize-linux-amd64-v0.6.1.tar.gz &&
+      dockerize -wait tcp://kafka:9092 -timeout 30s &&
+      python app.py"
+    environment:
+      - KAFKA_BROKER=kafka:9092 
+      - KAFKA_TOPIC=zone_1
+    
+
+  flask_app2:
+    build:      
+      dockerfile: Dockerfile
+      context: ./app
+    ports:
+      - "5002:5001"
+    depends_on:
+      - kafka
+    entrypoint: /bin/sh -c
+    command: >
+      "wget https://github.com/jwilder/dockerize/releases/download/v0.6.1/dockerize-linux-amd64-v0.6.1.tar.gz &&
+      tar -C /usr/local/bin -xzvf dockerize-linux-amd64-v0.6.1.tar.gz &&
+      rm dockerize-linux-amd64-v0.6.1.tar.gz &&
+      dockerize -wait tcp://kafka:9092 -timeout 30s &&
+      python app.py"
+    environment:
+      - KAFKA_BROKER=kafka:9092 
+      - KAFKA_TOPIC=zone_2
+    
+  
+  flask_app3:
+    build:
+      dockerfile: Dockerfile
+      context: ./app
+    ports:
+      - "5003:5001"
+    depends_on:
+      - kafka
+    entrypoint: /bin/sh -c
+    command: >
+      "wget https://github.com/jwilder/dockerize/releases/download/v0.6.1/dockerize-linux-amd64-v0.6.1.tar.gz &&
+      tar -C /usr/local/bin -xzvf dockerize-linux-amd64-v0.6.1.tar.gz &&
+      rm dockerize-linux-amd64-v0.6.1.tar.gz &&
+      dockerize -wait tcp://kafka:9092 -timeout 30s &&
+      python app.py"
+    environment:
+      - KAFKA_BROKER=kafka:9092 
+      - KAFKA_TOPIC=zone_3
+      # below is the go-monitor service
   redis:
     image: "redis:alpine"
     ports:
       - "6379:6379"
-  influxdb:
-    image: influxdb:latest
-    ports:
-      - "8086:8086"
-    volumes:
-      - influxdb-data:/var/lib/influxdb
+  # influxdb:
+  #   image: influxdb:latest
+  #   ports:
+  #     - "8086:8086"
+  #   volumes:
+  #     - influxdb-data:/var/lib/influxdb
   go-monitor-1:
     build:
       dockerfile: Dockerfile
@@ -20,10 +143,10 @@ services:
       - "8080:8080"
     depends_on:
       - redis
-      - influxdb
+      # - influxdb
     environment:
       - REDIS_HOST=redis
-      - INFLUXDB_HOST=influxdb
+      # - INFLUXDB_HOST=influxdb
       - monitor_ID=1
   go-monitor-2:
     build:
@@ -35,10 +158,10 @@ services:
       - "8081:8080"
     depends_on:
       - redis
-      - influxdb
+      # - influxdb
     environment:
       - REDIS_HOST=redis
-      - INFLUXDB_HOST=influxdb
+      # - INFLUXDB_HOST=influxdb
       - monitor_ID=2
   go-monitor-3:
     build:
@@ -50,12 +173,13 @@ services:
       - "8082:8080"
     depends_on:
       - redis
-      - influxdb
+      # - influxdb
     environment:
       - REDIS_HOST=redis
-      - INFLUXDB_HOST=influxdb
+      # - INFLUXDB_HOST=influxdb
       - monitor_ID=3
 
 
+
 volumes:
-  influxdb-data:
+  influxdb-data: {}
