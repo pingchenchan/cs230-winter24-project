@@ -91,6 +91,17 @@ func (p *ServerPool) Remove(rawUrl string) error {
 	return nil
 }
 
+// alive -> null
+func (p *ServerPool) Erase(rawUrl string) error {
+	index, ok := serverIndex(p.alives, rawUrl)
+	if !ok {
+		return ErrNoSuchUrl
+	}
+
+	p.alives = append(p.alives[:index], p.alives[index+1:]...)
+	return nil
+}
+
 // disconnected -> dead
 func (p *ServerPool) Disconnect(rawUrl string, delete bool) (*Backend, error) {
 	index, ok := serverIndex(p.disconnected, rawUrl)
@@ -143,6 +154,7 @@ func NewGateway() *Gateway {
 		syncCh:             make(chan struct{}),
 		addCh:              make(chan *Backend),
 		removeCh:           make(chan string),
+		eraseCh:            make(chan string),
 		disconnectCh:       make(chan string),
 		deleteCh:           make(chan string),
 		resurrectCh:        make(chan string),
@@ -164,6 +176,7 @@ type Gateway struct {
 	syncCh             chan struct{}
 	addCh              chan *Backend
 	removeCh           chan string
+	eraseCh            chan string
 	deleteCh           chan string
 	disconnectCh       chan string
 	resurrectCh        chan string
@@ -189,6 +202,9 @@ func (g *Gateway) process() {
 
 		case rawUrl = <-g.removeCh:
 			g.serverPool.Remove(rawUrl)
+
+		case rawUrl = <-g.eraseCh:
+			g.serverPool.Erase(rawUrl)
 
 		case rawUrl = <-g.disconnectCh:
 			g.serverPool.Disconnect(rawUrl, true)
@@ -235,6 +251,11 @@ func (g *Gateway) Add(backend *Backend) {
 
 func (g *Gateway) Remove(rawUrl string) {
 	g.removeCh <- rawUrl
+	g.sync()
+}
+
+func (g *Gateway) Erase(rawUrl string) {
+	g.eraseCh <- rawUrl
 	g.sync()
 }
 
@@ -314,7 +335,7 @@ func (g *Gateway) resurrectDisconnected() {
 	}
 }
 
-func (g *Gateway) report() {
+func (g *Gateway) report() error {
 	dead := g.copyDead()
 
 	log.Printf("Removed Servers:%d\n", len(dead))
@@ -327,7 +348,14 @@ func (g *Gateway) report() {
 	err := reportDeadBackends(g.monitorUrl, deadServers)
 	if err != nil {
 		log.Println(err)
+		return err
 	}
+
+	for _, v := range dead {
+		g.Delete(v.rawUrl())
+	}
+
+	return nil
 }
 
 func (g *Gateway) NextServer() *Backend {

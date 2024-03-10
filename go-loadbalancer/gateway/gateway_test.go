@@ -320,13 +320,46 @@ func TestGatewayHTTP(t *testing.T) {
 	assert.Equal(t, "Service 1", resp.Body.String())
 }
 
-// func TestGatewayMonitor(t *testing.T) {
+func TestGatewayMonitor(t *testing.T) {
+	gtw := NewGateway()
 
-// 	// err := gtw.report()
-// 	// assert.Nil(t, err)
-// 	// assert.Equal(t, aliveSet.Size(), len(gtw.serverPool.alives))
-// 	// assert.Equal(t, 0, len(gtw.serverPool.dead))
-// }
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	gtw.monitorUrl = "http://localhost:6000"
+
+	httpmock.RegisterResponder("PUT", "http://localhost:6000",
+		httpmock.NewStringResponder(200, "Service 0"))
+
+	serverNum := 100
+	servers := []string{}
+	for i := 0; i < serverNum; i++ {
+		backend := NewBackend(fmt.Sprintf("http://localhost:%d", 8000+i), gtw)
+		gtw.Add(backend)
+		servers = append(servers, backend.rawUrl())
+	}
+
+	for i := 0; i < len(servers); i++ {
+		if i%2 == 0 {
+			gtw.Erase(servers[i])
+		} else if i%5 == 0 {
+			gtw.Remove(servers[i])
+			if i%15 == 0 {
+				gtw.Disconnect(servers[i])
+			}
+		}
+	}
+
+	assert.Equal(t, 40, len(gtw.serverPool.alives))
+	assert.Equal(t, 7, len(gtw.serverPool.disconnected))
+	assert.Equal(t, 3, len(gtw.serverPool.dead))
+
+	err := gtw.report()
+	assert.Nil(t, err)
+	assert.Equal(t, 40, len(gtw.serverPool.alives))
+	assert.Equal(t, 7, len(gtw.serverPool.disconnected))
+	assert.Equal(t, 0, len(gtw.serverPool.dead))
+}
 
 // func TestCreateRouter(t *testing.T) {
 // 	// Activate the httpmock library

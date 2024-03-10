@@ -9,11 +9,11 @@ import (
 
 type Servers struct {
 	Adds    []string `json:"adds"`
-	Removes []string `json:"removes"`
+	Deletes []string `json:"deletes"`
 }
 
 type Monitor struct {
-	URL string `json:"url"`
+	Url string `json:"url"`
 }
 
 func CreateServer(port int, gtw *Gateway) *http.Server {
@@ -46,8 +46,8 @@ func CreateAdminServer(gtw *Gateway) *gin.Engine {
 			gtw.Add(NewBackend(a, gtw))
 		}
 
-		for _, d := range servers.Removes {
-			gtw.Remove(d)
+		for _, d := range servers.Deletes {
+			gtw.Erase(d)
 		}
 
 		c.JSON(http.StatusOK, nil)
@@ -60,7 +60,7 @@ func CreateAdminServer(gtw *Gateway) *gin.Engine {
 			return
 		}
 
-		gtw.monitorUrl = monitor.URL
+		gtw.monitorUrl = monitor.Url
 		c.JSON(http.StatusOK, nil)
 	})
 
