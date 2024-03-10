@@ -58,7 +58,7 @@ func main() {
 
 	//init clients
 
-	go manageContainers(cli)
+	go manageContainers(cli,redisClient)
 	leaderChangeChan := make(chan struct{})
 	
 	go monitorLeaderChanges(leaderChangeChan)

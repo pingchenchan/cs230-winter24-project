@@ -5,20 +5,28 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	// "time"
+	"github.com/docker/go-connections/nat"
+	"strconv"
+
+
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/redis/go-redis/v9"
 )
-func manageContainers(cli *client.Client) {
-	// ctx := context.Background()
-	//start a new container every 10 seconds
-	// go func() {
-	// 	for range time.Tick(10 * time.Second) {
-	// 		startContainer(ctx, cli, redisClient)
-	// 	}
-	// }()
+func manageContainers(cli *client.Client, redisClient *redis.Client) {
+	fmt.Printf("manageContainers success run:\n")
+	ctx := context.Background()
+	// start a new container every 10 seconds
+
+	go func() {
+		// for range time.Tick(10 * time.Second) {
+			fmt.Printf("Starting container\n")
+			startContainer(ctx, cli, redisClient)
+		// }
+	}()
 
 	// // stop the oldest container every 5 seconds
 	// go func() {
@@ -29,10 +37,34 @@ func manageContainers(cli *client.Client) {
 }
 
 func startContainer(ctx context.Context, cli *client.Client, redisClient *redis.Client) {
-	containerConfig := &container.Config{
-		Image: "nginx",
+	portNumber := "500" + strconv.Itoa(node.ID+3)
+	fmt.Printf("port: %v\n", portNumber )
+	hostConfig := &container.HostConfig{
+		NetworkMode: "cs230_default",
+		PortBindings: nat.PortMap{
+            "5001/tcp": []nat.PortBinding{
+                {
+                    HostIP:   "0.0.0.0",
+                    HostPort: portNumber  ,
+                },
+            },
+        },
 	}
-	resp, err := cli.ContainerCreate(ctx, containerConfig, nil, nil, nil, "")
+	containerConfig := &container.Config{
+		Image: "cs230-flask_app1",
+		ExposedPorts: nat.PortSet{
+			"5001/tcp": struct{}{},
+		},
+		Env: []string{
+            "KAFKA_BROKER=kafka:9092",
+            "KAFKA_TOPIC=zone_1",
+        },
+        Cmd: []string{
+            "/bin/sh", "-c",
+            "wget https://github.com/jwilder/dockerize/releases/download/v0.6.1/dockerize-linux-amd64-v0.6.1.tar.gz && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-v0.6.1.tar.gz && rm dockerize-linux-amd64-v0.6.1.tar.gz && dockerize -wait tcp://kafka:9092 -timeout 30s && python app.py",
+        },
+	}
+	resp, err := cli.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, "")
 	if err != nil {
 		log.Printf("Error creating container: %v", err)
 		return
