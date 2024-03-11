@@ -182,6 +182,29 @@ services:
       # - INFLUXDB_HOST=influxdb
       - monitor_ID=3
 
+  go-loadbalancer-1:
+    build:
+      dockerfile: Dockerfile
+      context: ./go-loadbalancer
+    ports:
+      - "3030:3000"
+      - "5050:5000"
+
+  go-loadbalancer-2:
+    build:
+      dockerfile: Dockerfile
+      context: ./go-loadbalancer
+    ports:
+      - "3031:3000"
+      - "5051:5000"
+
+  go-loadbalancer-3:
+    build:
+      dockerfile: Dockerfile
+      context: ./go-loadbalancer
+    ports:
+      - "3032:3000"
+      - "5052:5000"
 
 
 volumes:
