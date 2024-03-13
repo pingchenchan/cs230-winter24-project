@@ -1,21 +1,33 @@
 package main
+
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"time"
+
 	// "time"
-	"github.com/docker/go-connections/nat"
+	"crypto/rand"
+	"encoding/hex"
 	"strconv"
 
-
+	"github.com/docker/go-connections/nat"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/redis/go-redis/v9"
 )
+func randomHex(n int) (string, error) {
+    bytes := make([]byte, n)
+    if _, err := rand.Read(bytes); err != nil {
+        return "", err
+    }
+    return hex.EncodeToString(bytes), nil
+}
+
 func manageContainers(cli *client.Client, redisClient *redis.Client) {
 	fmt.Printf("manageContainers success run:\n")
 	ctx := context.Background()
@@ -27,13 +39,16 @@ func manageContainers(cli *client.Client, redisClient *redis.Client) {
 			startContainer(ctx, cli, redisClient)
 		// }
 	}()
+//wait 10 sec
+	time.Sleep(10 * time.Second)
 
+	
 	// // stop the oldest container every 5 seconds
-	// go func() {
-	// 	for range time.Tick(5 * time.Second) {
-	// 		stopOldestContainer(ctx, cli, redisClient)
-	// 	}
-	// }()
+	go func() {
+		// for range time.Tick(5 * time.Second) {
+			stopOldestContainer(ctx, cli, redisClient)
+		// }
+	}()
 }
 
 func startContainer(ctx context.Context, cli *client.Client, redisClient *redis.Client) {
@@ -50,8 +65,9 @@ func startContainer(ctx context.Context, cli *client.Client, redisClient *redis.
             },
         },
 	}
+	randomString, _ := randomHex(5)
 	containerConfig := &container.Config{
-		Image: "cs230-flask_app1",
+		Image: "cs230-flask_app"+strconv.Itoa(node.ID),
 		ExposedPorts: nat.PortSet{
 			"5001/tcp": struct{}{},
 		},
@@ -64,7 +80,7 @@ func startContainer(ctx context.Context, cli *client.Client, redisClient *redis.
             "wget https://github.com/jwilder/dockerize/releases/download/v0.6.1/dockerize-linux-amd64-v0.6.1.tar.gz && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-v0.6.1.tar.gz && rm dockerize-linux-amd64-v0.6.1.tar.gz && dockerize -wait tcp://kafka:9092 -timeout 30s && python app.py",
         },
 	}
-	resp, err := cli.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, "")
+	resp, err := cli.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, "flask_app"+strconv.Itoa(node.ID) +"_"+randomString,)
 	if err != nil {
 		log.Printf("Error creating container: %v", err)
 		return

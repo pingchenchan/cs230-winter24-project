@@ -41,8 +41,8 @@ services:
       - DOCKER_INFLUXDB_INIT_ORG=cs230
       - DOCKER_INFLUXDB_INIT_BUCKET=server
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=qE1J_1s3kLvjZJpjBKz9FtZSZ_zKqxZMOW6JEdTeDUvo8_nLUxGr7mQutPjtDAIONg68o35Dbe_5sQ2krnoUQg==
-    volumes:
-      - influxdb-data:/var/lib/influxdb2
+    # volumes:
+    #   - influxdb-data:/var/lib/influxdb2
   telegraf:
     image: telegraf:latest
     container_name: telegraf
@@ -139,7 +139,7 @@ services:
       context: ./go-monitor
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./go-monitor:/app
+      # - ./go-monitor:/app
     ports:
       - "8080:8080"
     depends_on:
@@ -155,7 +155,7 @@ services:
       context: ./go-monitor
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./go-monitor:/app
+      # - ./go-monitor:/app
     ports:
       - "8081:8080"
     depends_on:
@@ -171,7 +171,7 @@ services:
       context: ./go-monitor
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./go-monitor:/app
+      # - ./go-monitor:/app
     ports:
       - "8082:8080"
     depends_on:
@@ -207,5 +207,5 @@ services:
       - "5052:5000"
 
 
-volumes:
-  influxdb-data: {}
+# volumes:
+#   influxdb-data: {}
