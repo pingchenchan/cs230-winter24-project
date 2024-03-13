@@ -18,7 +18,7 @@ def home():
             async function startDataCollection() {
                 const response = await fetch('/start_collect');
                 const data = await response.json();
-                alert(data.message); // 或者在页面上显示消息
+                alert(data.message); 
             }
 
             function updateProgress() {
@@ -36,7 +36,7 @@ def home():
             }
 
             document.addEventListener('DOMContentLoaded', () => {
-                setInterval(updateProgress, 1000); // 每秒更新一次
+                setInterval(updateProgress, 1000); 
             });
         </script>
     </head>
