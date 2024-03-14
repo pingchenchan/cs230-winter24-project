@@ -67,7 +67,7 @@ func reportDeadBackends(monitorUrl string, dead []string) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPut, monitorUrl, bytes.NewBuffer(b))
+	req, err := http.NewRequest(http.MethodPut, monitorUrl+"/report", bytes.NewBuffer(b))
 	if err != nil {
 		return err
 	}

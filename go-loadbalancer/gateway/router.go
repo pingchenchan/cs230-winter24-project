@@ -26,6 +26,10 @@ func CreateServer(port int, gtw *Gateway) *http.Server {
 func CreateAdminServer(gtw *Gateway) *gin.Engine {
 	r := gin.Default()
 
+	r.GET("/health_check", func(c *gin.Context) {
+		c.String(http.StatusOK, "alive")
+	})
+
 	r.GET("/servers", func(c *gin.Context) {
 		servers := []string{}
 		for _, server := range gtw.copyAlive() {

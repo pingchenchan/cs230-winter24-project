@@ -328,7 +328,7 @@ func TestGatewayMonitor(t *testing.T) {
 
 	gtw.monitorUrl = "http://localhost:6000"
 
-	httpmock.RegisterResponder("PUT", "http://localhost:6000",
+	httpmock.RegisterResponder("PUT", "http://localhost:6000/report",
 		httpmock.NewStringResponder(200, "Service 0"))
 
 	serverNum := 100
