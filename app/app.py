@@ -29,6 +29,13 @@ def home():
                 updateProgress();
             }
 
+            async function startDataCollection3() {
+                const response = await fetch('/start_collect3');
+                const data = await response.json();
+                alert(data.message); 
+                updateProgress();
+            }
+
             async function stopDataCollection() {
                 const response = await fetch('/stop_collect');
                 const data = await response.json();
@@ -56,8 +63,9 @@ def home():
     </head>
     <body>
         <h1>This is an Example!</h1>
-        <button onclick="startDataCollection1()">Start Data_1 Collection</button>
-        <button onclick="startDataCollection2()">Start Data_2 Collection</button>
+        <button onclick="startDataCollection1()">High CPU Usage</button>
+        <button onclick="startDataCollection2()">Low CPU Usage</button>
+        <button onclick="startDataCollection3()">Scale Down</button>
         <button onclick="stopDataCollection()">Stop Data Collection</button>
         <p id="status">Status: idle</p>
         <p id="cpu_usage">CPU Usage: 0%</p>
@@ -157,6 +165,43 @@ def collect_and_send_data2():
         progress["status"] = "complete"
         progress["message"] = "Data collection and sending complete!"
 
+def collect_and_send_data3():
+    global progress
+    cpu_usage = 50
+    while cpu_usage <51 and not stop_collect_flag:
+        if cpu_usage > 10:
+            cpu_usage -= random.randint(1,5)
+        else:
+            cpu_usage = random.randint(1, 10)
+        memory_usage= random.randint(10, 80)
+        throughput = random.randint(100, 500)
+        health = "healthy" if cpu_usage < 70 else "unhealthy"
+        # Create data point
+        data_point = {
+            "cpu_usage": cpu_usage,
+            "memory_usage": memory_usage,
+            "throughput": throughput,
+            "health_status": health
+        }
+        # Send data point to Kafka topic
+        producer.send(kafka_topic, value=data_point)
+        print(f"Sent to Kafka -> CPU usage: {cpu_usage}%, Memory usage: {memory_usage}%, Throughput: {throughput} mbps, Health: {health}")
+        progress = {
+            "status": "collecting",
+            "cpu_usage": cpu_usage,
+            "memory_usage": memory_usage,
+            "throughput": throughput,
+            "health": health,
+            "message": f"Sent to Kafka -> CPU usage: {cpu_usage}%, Memory usage: {memory_usage}%, Throughput: {throughput} mbps, Health: {health}"
+        }
+        time.sleep(1)
+    if stop_collect_flag:
+        progress["status"] = "stopping"
+        progress["message"] = "Data collection stopped."
+    else:
+        progress["status"] = "complete"
+        progress["message"] = "Data collection and sending complete!"
+
 @app.route('/start_collect1')
 def start_collect1():
     global progress, stop_collect_flag
@@ -175,6 +220,18 @@ def start_collect2():
         stop_collect_flag = False 
         progress = {"status": "starting", "cpu_usage": 0, "memory_usage": 0,"throughput": 0,"health": "unknown", "message": "Starting data collection..."}
         thread = threading.Thread(target=collect_and_send_data2)
+        thread.start()
+        return jsonify({"message": "Data collection started."})
+    else:
+        return jsonify({"message": "Please stop the current data collection first."})
+
+@app.route('/start_collect3')
+def start_collect3():
+    global progress,stop_collect_flag
+    if stop_collect_flag:
+        stop_collect_flag = False 
+        progress = {"status": "starting", "cpu_usage": 0, "memory_usage": 0,"throughput": 0,"health": "unknown", "message": "Starting data collection..."}
+        thread = threading.Thread(target=collect_and_send_data3)
         thread.start()
         return jsonify({"message": "Data collection started."})
     else:
