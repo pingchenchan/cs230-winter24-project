@@ -132,9 +132,9 @@ All the system data would be sent to Kafka. Kafke would store the data according
 
 The monitoring system using a bully leadership election algorithm to ensure Fault Tolerance.The master monitor watches over the health of the servers and integrates with the load balancer in real-time to ensure that the servers can be scaled up and down in a timely manner to achieve flexible resource utilization and performance.
 
-For reliability, the non-master monitor checks the health of the mastermonitor every five seconds. If the primary monitor fails, start a Bully leader election algorithm to select a new leader. Among the remaining monitors, the one with the highest ID will be elected as the primary monitor.
+For reliability, the non-master monitor checks the health of the master monitor every 5 seconds. If the primary monitor fails, start a Bully leader election algorithm to select a new leader. Among the remaining monitors, the one with the highest ID will be elected as the primary monitor.
 
-The monitoring system collects GPU utilization data from each server through InfluxDB. An average GPU utilization is calculated for each zone. When this average exceeds a predefined maximum threshold, the system spawns a new server in the corresponding zone and updates the load balancer to accommodate the increase. Conversely, if the utilization drops below the minimum threshold for redundancy in the number of servers, the server is deactivated to save resources and the load balancer is notified in a timely manner.
+The monitoring system collects CPU utilization data from each server through InfluxDB  every 10 seconds. An average CPU utilization is calculated for each zone. When this average exceeds a predefined maximum threshold, the system spawns a new server in the corresponding zone and updates the load balancer to accommodate the increase. Conversely, if the utilization drops below the minimum threshold for redundancy in the number of servers, the server is deactivated to save resources and the load balancer is notified in a timely manner.
 
 The monitoring system uses Redis as a database, which can be used to store and query the IP of containers when they are created or deleted.
 
