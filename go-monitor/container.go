@@ -12,6 +12,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"strconv"
+	"bytes"
 
 	"github.com/docker/go-connections/nat"
 	"github.com/docker/docker/api/types/container"
@@ -20,6 +21,17 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/influxdata/influxdb-client-go/v2"
 )
+type MonitorReport struct {
+    Dead []string `json:"dead"`
+}
+type Monitor struct {
+	Url string `json:"url"`
+}
+
+type Servers struct {
+	Adds    []string `json:"adds"`
+	Deletes []string `json:"deletes"`
+}
 func randomHex(n int) (string, error) {
     bytes := make([]byte, n)
     if _, err := rand.Read(bytes); err != nil {
@@ -35,8 +47,16 @@ func manageContainers(cli *client.Client, redisClient *redis.Client, influxClien
 	// Store the container ID in Redis
 	appIDs := []string{"cs230-flask_app1-1", "cs230-flask_app2-1", "cs230-flask_app3-1"}
 	appPorts := []string{"5001", "5002", "5003"}
-
-	//clear redis
+	// time.Sleep(5 * time.Second)
+	if (node.isLeader ){
+		for i := 1; i <= 3; i++ {
+			err := sendMonitorUpdate("http://cs230-go-monitor-"+strconv.Itoa(3)+"-1:8080", "http://go-loadbalancer-"+strconv.Itoa(i)+":5000/monitor")
+			if err != nil {
+				log.Fatalf("Failed to send monitor update: %v", err)
+			}
+		}
+		log.Printf("Sent PUT /monitor update to all load balancers")
+	//register 3 apps across different zones
 	redisClient.FlushAll(ctx)
 	for idx, appID := range appIDs {
 		if err := redisClient.SAdd(ctx, "zone"+strconv.Itoa(idx+1), appID).Err(); err != nil {
@@ -52,12 +72,21 @@ func manageContainers(cli *client.Client, redisClient *redis.Client, influxClien
 			log.Printf("Error storing port in Redis: %v", err)
 			return
 		}
+		//add app to load balancer
+		if err := addAppToLB("http://go-loadbalancer-"+strconv.Itoa(idx+1)+":5000", "http://"+appID+":5001"); err != nil {
+			log.Fatalf("Failed to delete app from load balancer: %v", err)
+		}
 	
 	}
+	log.Printf("Registered 3 apps across different zones and added to load balancer")
+	}
+	
+
+	
 
 
 	
-	//register 3 apps across different zones
+
 	go func() {
 		for range time.Tick(10 * time.Second) {
 			if (node.isLeader ){
@@ -78,17 +107,22 @@ func manageContainers(cli *client.Client, redisClient *redis.Client, influxClien
 					}
 					fmt.Printf("%v running apps in %v: %v. Last 10 sec avg CPU usage is %v\n",containersNumber , zone, containers, meanCPUUsage)
 
+					//start or stop containers based on CPU usage
 					if (meanCPUUsage!=-1){
+						//start a container if the CPU usage is high
 						if (containersNumber<MAX_APPS_PER_ZONE && meanCPUUsage>=MAX_CPU_USAGE){
 
 							startContainer(ctx, cli, redisClient,zone)
+
+
 						}
+						//stop a container if the CPU usage is low
 						if (containersNumber>=2 && meanCPUUsage<=MIN_CPU_USAGE){
 
 
 							//get one container from the zone
-							containerName , err := redisClient.SPop(ctx, zone).Result()
-							fmt.Printf("stop container id: %s in %v\n", containerName,zone)
+							containerName, err := redisClient.SPop(ctx, zone).Result()
+							fmt.Printf("stop container id: %s in %v\n", containerName, zone)
 							if err != nil {
 								if err == redis.Nil {
 									log.Println("No containers to stop")
@@ -97,44 +131,19 @@ func manageContainers(cli *client.Client, redisClient *redis.Client, influxClien
 								}
 								return
 							}
-							//get the maping port from the container
 
-							//stop the container
-							if err := cli.ContainerStop(ctx, containerName , container.StopOptions{}); err != nil {
+							err = delContainer(ctx, cli, redisClient, containerName,zone)
+							if err != nil {
 								log.Printf("Error stopping container: %v, %v", containerName , err)
 								return
 							}
-							//remove the container
-							if err := cli.ContainerRemove(ctx, containerName, types.ContainerRemoveOptions{}); err != nil {
-								log.Printf("Error removing container: %v, %v", containerName, err)
-								return
-							}
-							//remove the port from redis
-							if err := redisClient.Del(ctx, containerName).Err(); err != nil {
-								log.Printf("Error removing container ID from Redis: %v", err)
-								return
-							}
-							//remove the port from redis
-							if err := redisClient.SRem(ctx, "ports", containerName).Err(); err != nil {
-								log.Printf("Error removing port from Redis: %v", err)
-								return
-							}
+
+
 
 	
 						}
 
-//print used port in redis
-						// ports, err := redisClient.SMembers(ctx, "ports").Result()
-						// if err != nil {
-						// 	log.Printf("Error retrieving port from Redis: %v", err)
-						// 	return
-						// }
-						// fmt.Printf("ports: %v\n", ports)
 					}
-	
-						// startContainer(ctx, cli, redisClient,zone)
-					
-					
 
 				}
 
@@ -159,33 +168,97 @@ func manageContainers(cli *client.Client, redisClient *redis.Client, influxClien
 
 
 
-		//stop all containers in zone 1
-
-
-		// ...
-
-		// containers, err := redisClient.SMembers(ctx, "zone1").Result()
-		// if err != nil {
-		// 	log.Printf("Error retrieving container IDs from Redis: %v", err)
-		// 	return
-		// }
-		// for _, id := range containers {
-			// id := "cs230-flask_app1-1"
-			// if err := cli.ContainerStop(ctx, id, container.StopOptions{}); err != nil {
-			// 	log.Printf("Error stopping container: %v, %v", id, err)
-			// 	return
-			// }
-			// log.Printf("Stopped container: %v", id)
-		// }
-
-
-		// for range time.Tick(5 * time.Second) {
-			// stopOldestContainer(ctx, cli, redisClient)
-		// }
+		
 		}
 	}()
 }
 
+
+func delContainer(ctx context.Context, cli *client.Client, redisClient *redis.Client, containerName string,zone string) error {
+	//stop the container
+	if err := cli.ContainerStop(ctx, containerName , container.StopOptions{}); err != nil {
+		log.Printf("Error stopping container: %v, %v", containerName , err)
+		return err
+	}
+	//remove the container
+	if err := cli.ContainerRemove(ctx, containerName, types.ContainerRemoveOptions{}); err != nil {
+		log.Printf("Error removing container: %v, %v", containerName, err)
+		return err
+	}
+	//remove the port from redis
+	if err := redisClient.Del(ctx, containerName).Err(); err != nil {
+		log.Printf("Error removing container ID from Redis: %v", err)
+		return err
+	}
+	//remove the port from redis
+	if err := redisClient.SRem(ctx, "ports", containerName).Err(); err != nil {
+		log.Printf("Error removing port from Redis: %v", err)
+		return err
+	}
+
+	zoneNumberChar := zone[len(zone)-1:]
+	if err := deleteAppFromLB("http://go-loadbalancer-"+zoneNumberChar+":5000", "http://"+containerName+":5001"); err != nil {
+		log.Fatalf("Failed to delete app from load balancer: %v", err)
+	}
+	fmt.Printf("update delete app to load balancer: %s in %v\n", containerName, zone)
+
+	return nil
+}
+
+func reportHandler(w http.ResponseWriter, r *http.Request, cli *client.Client, redisClient *redis.Client) {
+    if r.Method != http.MethodPut {
+        http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    var report MonitorReport
+    err := json.NewDecoder(r.Body).Decode(&report)
+    if err != nil {
+        http.Error(w, "Bad Request", http.StatusBadRequest)
+        return
+    }
+
+    for _, serverName := range report.Dead {
+        //search for the server in redis from all zones
+        zones:= []string{"zone1", "zone2", "zone3"}
+        found := false
+        for _, zone := range zones {
+            containers, err := redisClient.SMembers(r.Context(), zone).Result()
+            if err != nil {
+                http.Error(w, fmt.Sprintf("Error retrieving container IDs from Redis: %v", err), http.StatusInternalServerError)
+                return
+            }
+            for _, containerName := range containers {
+                if containerName == serverName {
+                    //delete the container from redis set
+                    if err := redisClient.SRem(r.Context(), zone, serverName).Err(); err != nil {
+                        http.Error(w, fmt.Sprintf("Error removing container ID from Redis: %v", err), http.StatusInternalServerError)
+                        return
+                    }
+                    
+                    // Stop the server
+                    if err := delContainer(r.Context(), cli, redisClient, serverName, zone); err != nil {
+                        http.Error(w, err.Error(), http.StatusInternalServerError)
+                        return
+                    }
+
+                    found = true
+                    break
+                }
+            }
+            if found {
+                break
+            }
+        }
+    }
+
+    // Respond with a success message
+    w.WriteHeader(http.StatusOK)
+    w.Write([]byte("Servers stopped"))
+}
+
+	
+	
 func startContainer(ctx context.Context, cli *client.Client, redisClient *redis.Client,zone string) {
 	ports, err := redisClient.SMembers(ctx, "ports").Result()
 	if err != nil {
@@ -255,6 +328,11 @@ func startContainer(ctx context.Context, cli *client.Client, redisClient *redis.
 		return
 	}
 	log.Printf("Started container: %v", resp.ID)
+
+	zoneNumberChar := zone[len(zone)-1:]
+	if err := addAppToLB("http://go-loadbalancer-"+zoneNumberChar+":5000", "http://"+containerName+":5001"); err != nil {
+		log.Fatalf("Failed to delete app from load balancer: %v", err)
+	}
 }
 
 func containersHandler(w http.ResponseWriter, r *http.Request, cli *client.Client) {
@@ -296,20 +374,86 @@ func getRunningContainers(cli *client.Client, ctx context.Context) ([]string, er
 	return containerIDs, nil
 }
 
-func stopOldestContainer(ctx context.Context, cli *client.Client, redisClient *redis.Client) {
-	id, err := redisClient.RPop(ctx, "containers").Result()
-	if err != nil {
-		if err == redis.Nil {
-			log.Println("No containers to stop")
-		} else {
-			log.Printf("Error retrieving container ID: %v", err)
-		}
-		return
-	}
+func sendMonitorUpdate(monitorName string, url string) error {
+    client := &http.Client{}
+    monitor := Monitor{Url: monitorName}
+    jsonData, err := json.Marshal(monitor)
+    if err != nil {
+        return err
+    }
 
-	if err := cli.ContainerStop(ctx, id, container.StopOptions{}); err != nil {
-		log.Printf("Error stopping container: %v, %v", id, err)
-		return
-	}
-	log.Printf("Stopped container: %v", id)
+    req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonData))
+    if err != nil {
+        return err
+    }
+
+    req.Header.Set("Content-Type", "application/json")
+    resp, err := client.Do(req)
+    if err != nil {
+        return err
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != http.StatusOK {
+        return fmt.Errorf("received non-OK response: %s", resp.Status)
+    }
+
+    return nil
 }
+
+func addAppToLB(LBurl string, addedAppUrl string) error {
+    client := &http.Client{}
+    servers := Servers{Adds: []string{addedAppUrl}}
+
+    jsonData, err := json.Marshal(servers)
+    if err != nil {
+        return err
+    }
+
+    req, err := http.NewRequest(http.MethodPut, LBurl+"/servers", bytes.NewBuffer(jsonData))
+    if err != nil {
+        return err
+    }
+
+    req.Header.Set("Content-Type", "application/json")
+    resp, err := client.Do(req)
+    if err != nil {
+        return err
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != http.StatusOK {
+        return fmt.Errorf("received non-OK response: %s", resp.Status)
+    }
+
+    return nil
+}
+
+func deleteAppFromLB(LBurl string, deletedAppUrl string) error {
+    client := &http.Client{}
+    servers := Servers{Deletes: []string{deletedAppUrl}}
+
+    jsonData, err := json.Marshal(servers)
+    if err != nil {
+        return err
+    }
+
+    req, err := http.NewRequest(http.MethodPut, LBurl+"/servers", bytes.NewBuffer(jsonData))
+    if err != nil {
+        return err
+    }
+
+    req.Header.Set("Content-Type", "application/json")
+    resp, err := client.Do(req)
+    if err != nil {
+        return err
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != http.StatusOK {
+        return fmt.Errorf("received non-OK response: %s", resp.Status)
+    }
+
+    return nil
+}
+

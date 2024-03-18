@@ -25,9 +25,10 @@ var (
 
 )
 
-const MAX_CPU_USAGE = 0.8
-const MIN_CPU_USAGE = 0.1
+const MAX_CPU_USAGE = 70
+const MIN_CPU_USAGE = 10
 const MAX_APPS_PER_ZONE = 3
+const DEFAULT_CPU_USAGE = 50.0
 
 func main() {
 	
@@ -69,7 +70,7 @@ func main() {
 	
 	go monitorLeaderChanges(leaderChangeChan)
     go startHealthCheck(leaderChangeChan,redisClient)
-	startHTTPServer(cli, leaderChangeChan) 
+	startHTTPServer(cli, leaderChangeChan, redisClient, influxClient)
 	}
 
 	// func ConnectToInfluxDB() (influxdb2.Client, error) {
@@ -116,7 +117,7 @@ func initClients() (*client.Client, *redis.Client, influxdb2.Client, error) {
 
 
 
-func startHTTPServer(cli *client.Client, leaderChangeChan chan struct{}) {
+func startHTTPServer(cli *client.Client, leaderChangeChan chan struct{}, redisClient *redis.Client, influxClient influxdb2.Client) {
 	http.HandleFunc("/alive", func(w http.ResponseWriter, r *http.Request) {
         fmt.Fprint(w, "alive")
     })
@@ -131,6 +132,10 @@ func startHTTPServer(cli *client.Client, leaderChangeChan chan struct{}) {
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatalf("Error starting HTTP server: %v", err)
 	}
+
+
+	//inplement PUT /report: Update dead servers reported from a load balancer.
+	http.HandleFunc("/report", func(w http.ResponseWriter, r *http.Request) {
+		reportHandler(w, r, cli,redisClient )
+	})
 }
-
-

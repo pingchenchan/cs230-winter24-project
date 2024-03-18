@@ -26,7 +26,7 @@ func QueryData(zone string, influxClient influxdb2.Client) (float64, error){
 
    // Get the query API from the client
    queryAPI := influxClient.QueryAPI(influxdbOrg)
-   var meanCPUUsage float64 = -1
+   var meanCPUUsage float64 = DEFAULT_CPU_USAGE
    // Execute the query
    result, err := queryAPI.Query(context.Background(), query)
    if err != nil {

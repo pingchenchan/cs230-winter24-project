@@ -64,8 +64,8 @@ def home():
     <body>
         <h1>This is an Example!</h1>
         <button onclick="startDataCollection1()">High CPU Usage</button>
-        <button onclick="startDataCollection2()">Low CPU Usage</button>
-        <button onclick="startDataCollection3()">Scale Down</button>
+        <button onclick="startDataCollection2()">Medium CPU Usage</button>
+        <button onclick="startDataCollection3()">Low CPU Usage</button>
         <button onclick="stopDataCollection()">Stop Data Collection</button>
         <p id="status">Status: idle</p>
         <p id="cpu_usage">CPU Usage: 0%</p>
