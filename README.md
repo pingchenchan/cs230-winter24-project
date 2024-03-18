@@ -21,7 +21,10 @@ To better understand the assumptions and the design of the system, please refer 
 
 ### Application
 
-TODO
+- Send the system data to Kafka every second. (ex:cpu usage, memory usage, throughput, health status)
+- Simulate 3 types of situations. (ex: high cpu usage, low cpu usage, scale down)
+- Provide a web to show the real-time updated data
+- Provide a RESTful endpoint to fetch the health status of the applications.
 
 ### Monitor
 - Start a new `nginx` Docker container every 10 seconds.
@@ -109,7 +112,9 @@ The dead pool is reported every 60 seconds by yet another goroutine. If the repo
 
 ### Application
 
-TODO
+There would be 3 servers running. In the begining, we need to open the browser and enter the IP address of each servers. We would see 3 buttons wich are 'High CPU Usage', 'Low CPU Usage', 'Scale Down'. In 'High CPU Usage', the cpu usage would sart from 0 and become higher gradually. Once it exceed 70, it would remian between 70 to 75. It simulates high cpu usage. In 'Low CPU Usage', the cpu usage would sart from 0 and become higher gradually. Once it exceed 20, it would remian between 20 to 30. It  would not be more than 30. It simulates low cpu usage. In 'Scale down', the cpu usage would sart from 50 and become lower gradually. Once it less than 10, it would remian between 1 to 10. All the system data would be sent to Kafka. Kafke would store the data according to different kafka_topic. Telegraf would consume the data and write them into Influxdb.
+
+
 
 ### Monitor
 
