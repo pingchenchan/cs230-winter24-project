@@ -116,15 +116,15 @@ The dead pool is reported every 60 seconds by yet another goroutine. If the repo
 
 ### Application
 
-There would be 3 servers running. In the begining, we need to open the browser and enter the IP address of each servers. We would see 3 buttons wich are 'High CPU Usage', 'Low CPU Usage', 'Scale Down'. 
+Three servers are set up for operation. Initially, one must open a browser and enter the IP address of each server. On accessing these servers, three buttons labeled 'High CPU Usage', 'Low CPU Usage', and 'Scale Down' are presented.
 
-In 'High CPU Usage', the cpu usage would sart from 20 and become higher gradually. Once it exceed 70, it would remian between 70 to 75. It simulates high cpu usage. 
+High CPU Usage: On selecting this option, CPU usage starts at 0% and increases gradually. Once it exceeds 70%, it remains within the range of 70% to 75%, simulating a high CPU usage scenario. Once 
 
-In 'Low CPU Usage', the cpu usage would sart from 20 and become higher gradually. Once it exceed 20, it would remian between 20 to 30. It  would not be more than 30. It simulates low cpu usage. 
+Low CPU Usage: Upon selection, CPU usage begins at 0% and slightly increases. After exceeding 20%, it stabilizes between 20% to 30%, never surpassing 30%. This simulates a low CPU usage condition.
 
-In 'Scale down', the cpu usage would sart from 50 and become lower gradually. Once it less than 10, it would remian between 1 to 10. 
+Scale Down: Choosing this option initiates CPU usage at 50%, which then gradually decreases. Once it falls below 10%, it stays within 1% to 10%, simulating a scale-down in resource utilization.
 
-All the system data would be sent to Kafka. Kafke would store the data according to different kafka_topic. Telegraf would consume the data and write them into Influxdb.
+All system data is sent to Kafka, which organizes the data into different topics. Telegraf then consumes this data and writes it into InfluxDB for storage and analysis.
 
 
 
