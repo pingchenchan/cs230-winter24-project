@@ -1,7 +1,5 @@
-import influxdb_client, os, time, threading, random
+import os, time, threading, random
 from flask import Flask, jsonify
-from influxdb_client import InfluxDBClient, Point, WritePrecision
-from influxdb_client.client.write_api import SYNCHRONOUS
 import json
 from kafka import KafkaProducer
 
@@ -56,16 +54,26 @@ def home():
                     .catch(error => console.error('Error fetching data:', error));
             }
 
+            function updateKafkaTopic() {
+                fetch('/get_kafka_topic')
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('kafka_topic').innerText = `This is: ${data.kafka_topic}`;
+                    })
+                    .catch(error => console.error('Error fetching Kafka topic:', error));
+            }
+
             document.addEventListener('DOMContentLoaded', () => {
                 setInterval(updateProgress, 1000); // Update progress every 1 second
+                updateKafkaTopic();
             });
         </script>
     </head>
     <body>
-        <h1>This is an Example!</h1>
+        <h1 id="kafka_topic">This is </h1>
         <button onclick="startDataCollection1()">High CPU Usage</button>
-        <button onclick="startDataCollection2()">Medium CPU Usage</button>
-        <button onclick="startDataCollection3()">Low CPU Usage</button>
+        <button onclick="startDataCollection2()">Low CPU Usage</button>
+        <button onclick="startDataCollection3()">Scale Down</button>
         <button onclick="stopDataCollection()">Stop Data Collection</button>
         <p id="status">Status: idle</p>
         <p id="cpu_usage">CPU Usage: 0%</p>
@@ -93,7 +101,7 @@ stop_collect_flag = True
 
 def collect_and_send_data1():
     global progress
-    cpu_usage = 20
+    cpu_usage = 0 
     while cpu_usage < 80 and not stop_collect_flag:
         if cpu_usage > 70:
             cpu_usage = random.randint(70, 75)
@@ -130,7 +138,7 @@ def collect_and_send_data1():
 
 def collect_and_send_data2():
     global progress
-    cpu_usage = 20
+    cpu_usage = 0
     while cpu_usage <35 and not stop_collect_flag:
         if cpu_usage > 20:
             cpu_usage = random.randint(20, 30)
@@ -245,6 +253,9 @@ def stop_collect():
     progress["message"] = "Stopping data collection..."
     return jsonify({"message": "Data collection stopped."})
 
+@app.route('/get_kafka_topic')
+def get_kafka_topic():
+    return jsonify({"kafka_topic": kafka_topic})
 
 @app.route('/progress')
 def get_progress():
