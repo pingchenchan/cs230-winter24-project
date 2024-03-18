@@ -29,6 +29,7 @@ const MAX_CPU_USAGE = 70
 const MIN_CPU_USAGE = 10
 const MAX_APPS_PER_ZONE = 3
 const DEFAULT_CPU_USAGE = 50.0
+const HEALTH_CHECK_INTERVAL = 5
 
 func main() {
 	

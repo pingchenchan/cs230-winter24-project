@@ -95,7 +95,7 @@ func healthCheck(node *Node , nodes map[int]*Node, leaderChangeChan chan struct{
 		// If the leader is not alive, start a new election
 		// If the leader is alive, continue
 		client := &http.Client{
-			Timeout: time.Second * 1,  // Set timeout to 1 second
+			Timeout: time.Second * HEALTH_CHECK_INTERVAL,  // Set timeout to 1 second
 		}
 		resp, err := client.Get(fmt.Sprintf("http://go-monitor-%d:8080/alive", leader.ID))
 		

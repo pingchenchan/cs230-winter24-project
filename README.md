@@ -27,10 +27,14 @@ To better understand the assumptions and the design of the system, please refer 
 - Provide a RESTful endpoint to fetch the health status of the applications.
 
 ### Monitor
-- Start a new `nginx` Docker container every 10 seconds.
-- Stop the oldest running Docker container every 20 seconds.
-- Store and retrieve container IDs from Redis.
-- Provide a RESTful endpoint to fetch the list of running containers.
+
+- Bully leader election algorithm for master monitor election. Send the master monitor IP to the load balancer.
+- Check master health status every 5 seconds from non-master monitor. If detect master dead, start new election.
+- At the beginning, create one server for each zone (zone1, zone2, zone3). Send each server IP to load balancer of each zone.
+- Get each servers GPU usage from Influxdb, calculate average GPU usage of each zone. If higher than maximun usage threshuld, create a new server in this zone and send new server's IP to load balancer of this zone. If lower than min usage threshuld and server number greater than 1, delete a server in this zone, and send deleted server's IP to load balancer of this zone.
+- When dead server report is received from load balancer, delete this dead server.
+- Use redis to store container relative information for creating, deleting and retrieving container information.
+
 
 ## System Architecture
 
@@ -114,9 +118,9 @@ The dead pool is reported every 60 seconds by yet another goroutine. If the repo
 
 There would be 3 servers running. In the begining, we need to open the browser and enter the IP address of each servers. We would see 3 buttons wich are 'High CPU Usage', 'Low CPU Usage', 'Scale Down'. 
 
-In 'High CPU Usage', the cpu usage would sart from 0 and become higher gradually. Once it exceed 70, it would remian between 70 to 75. It simulates high cpu usage. 
+In 'High CPU Usage', the cpu usage would sart from 20 and become higher gradually. Once it exceed 70, it would remian between 70 to 75. It simulates high cpu usage. 
 
-In 'Low CPU Usage', the cpu usage would sart from 0 and become higher gradually. Once it exceed 20, it would remian between 20 to 30. It  would not be more than 30. It simulates low cpu usage. 
+In 'Low CPU Usage', the cpu usage would sart from 20 and become higher gradually. Once it exceed 20, it would remian between 20 to 30. It  would not be more than 30. It simulates low cpu usage. 
 
 In 'Scale down', the cpu usage would sart from 50 and become lower gradually. Once it less than 10, it would remian between 1 to 10. 
 
@@ -126,7 +130,15 @@ All the system data would be sent to Kafka. Kafke would store the data according
 
 ### Monitor
 
-TODO
+The monitoring system using a bully leadership election algorithm to ensure Fault Tolerance.The master monitor watches over the health of the servers and integrates with the load balancer in real-time to ensure that the servers can be scaled up and down in a timely manner to achieve flexible resource utilization and performance.
+
+For reliability, the non-master monitor checks the health of the mastermonitor every five seconds. If the primary monitor fails, start a Bully leader election algorithm to select a new leader. Among the remaining monitors, the one with the highest ID will be elected as the primary monitor.
+
+The monitoring system collects GPU utilization data from each server through InfluxDB. An average GPU utilization is calculated for each zone. When this average exceeds a predefined maximum threshold, the system spawns a new server in the corresponding zone and updates the load balancer to accommodate the increase. Conversely, if the utilization drops below the minimum threshold for redundancy in the number of servers, the server is deactivated to save resources and the load balancer is notified in a timely manner.
+
+The monitoring system uses Redis as a database, which can be used to store and query the IP of containers when they are created or deleted.
+
+
 
 ## API Reference
 

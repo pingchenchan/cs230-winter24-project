@@ -93,7 +93,7 @@ stop_collect_flag = True
 
 def collect_and_send_data1():
     global progress
-    cpu_usage = 0 
+    cpu_usage = 20
     while cpu_usage < 80 and not stop_collect_flag:
         if cpu_usage > 70:
             cpu_usage = random.randint(70, 75)
@@ -130,7 +130,7 @@ def collect_and_send_data1():
 
 def collect_and_send_data2():
     global progress
-    cpu_usage = 0
+    cpu_usage = 20
     while cpu_usage <35 and not stop_collect_flag:
         if cpu_usage > 20:
             cpu_usage = random.randint(20, 30)
