@@ -81,7 +81,7 @@ services:
       python app.py"
     environment:
       - KAFKA_BROKER=kafka:9092 
-      - KAFKA_TOPIC=zone_1
+      - KAFKA_TOPIC=zone1
     
 
   flask_app2:
@@ -101,7 +101,7 @@ services:
       python app.py"
     environment:
       - KAFKA_BROKER=kafka:9092 
-      - KAFKA_TOPIC=zone_2
+      - KAFKA_TOPIC=zone2
     
   
   flask_app3:
@@ -121,7 +121,7 @@ services:
       python app.py"
     environment:
       - KAFKA_BROKER=kafka:9092 
-      - KAFKA_TOPIC=zone_3
+      - KAFKA_TOPIC=zone3
       # below is the go-monitor service
   redis:
     image: "redis:alpine"
@@ -144,11 +144,17 @@ services:
       - "8080:8080"
     depends_on:
       - redis
-      # - influxdb
+      - influxdb
     environment:
       - REDIS_HOST=redis
-      # - INFLUXDB_HOST=influxdb
+      - INFLUXDB_HOST=influxdb
       - monitor_ID=1
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=qE1J_1s3kLvjZJpjBKz9FtZSZ_zKqxZMOW6JEdTeDUvo8_nLUxGr7mQutPjtDAIONg68o35Dbe_5sQ2krnoUQg==
+      - INFLUXDB_ORG=cs230
+      - INFLUXDB_BUCKET=server
+      - DOCKER_INFLUXDB_INIT_USERNAME=terrylin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=lin29717294
   go-monitor-2:
     build:
       dockerfile: Dockerfile
@@ -160,11 +166,17 @@ services:
       - "8081:8080"
     depends_on:
       - redis
-      # - influxdb
+      - influxdb
     environment:
       - REDIS_HOST=redis
-      # - INFLUXDB_HOST=influxdb
+      - INFLUXDB_HOST=influxdb
       - monitor_ID=2
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=qE1J_1s3kLvjZJpjBKz9FtZSZ_zKqxZMOW6JEdTeDUvo8_nLUxGr7mQutPjtDAIONg68o35Dbe_5sQ2krnoUQg==
+      - INFLUXDB_ORG=cs230
+      - INFLUXDB_BUCKET=server
+      - DOCKER_INFLUXDB_INIT_USERNAME=terrylin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=lin29717294
   go-monitor-3:
     build:
       dockerfile: Dockerfile
@@ -176,11 +188,17 @@ services:
       - "8082:8080"
     depends_on:
       - redis
-      # - influxdb
+      - influxdb
     environment:
       - REDIS_HOST=redis
-      # - INFLUXDB_HOST=influxdb
+      - INFLUXDB_HOST=influxdb
       - monitor_ID=3
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=qE1J_1s3kLvjZJpjBKz9FtZSZ_zKqxZMOW6JEdTeDUvo8_nLUxGr7mQutPjtDAIONg68o35Dbe_5sQ2krnoUQg==
+      - INFLUXDB_ORG=cs230
+      - INFLUXDB_BUCKET=server
+      - DOCKER_INFLUXDB_INIT_USERNAME=terrylin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=lin29717294
 
   go-loadbalancer-1:
     build:

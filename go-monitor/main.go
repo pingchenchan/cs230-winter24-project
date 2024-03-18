@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+
 	"github.com/docker/docker/client"
+	"github.com/influxdata/influxdb-client-go/v2"
 	"github.com/redis/go-redis/v9"
 )
 type Node struct {
@@ -23,8 +25,12 @@ var (
 
 )
 
+const MAX_CPU_USAGE = 0.8
+const MIN_CPU_USAGE = 0.1
+const MAX_APPS_PER_ZONE = 3
 
 func main() {
+	
 	fmt.Printf("success run:\n")
 	monitorID, err := strconv.Atoi(os.Getenv("monitor_ID"))
 	//print monitor ID
@@ -41,7 +47,7 @@ func main() {
     node  = nodes[monitorID]
 	
 	// Create a channel to signal when the leader changes
-	cli, redisClient, err := initClients()
+	cli, redisClient,influxClient, err := initClients()
 	
 	if err != nil {
 		log.Fatalf("Error initializing clients: %v", err)
@@ -58,7 +64,7 @@ func main() {
 
 	//init clients
 
-	go manageContainers(cli,redisClient)
+	go manageContainers(cli, redisClient, influxClient)
 	leaderChangeChan := make(chan struct{})
 	
 	go monitorLeaderChanges(leaderChangeChan)
@@ -66,13 +72,31 @@ func main() {
 	startHTTPServer(cli, leaderChangeChan) 
 	}
 
+	// func ConnectToInfluxDB() (influxdb2.Client, error) {
 
+	// 	dbToken := os.Getenv("INFLUXDB_TOKEN")
+	// 	if dbToken == "" {
+	// 		return nil, errors.New("INFLUXDB_TOKEN must be set")
+	// 	}
 	
-func initClients() (*client.Client, *redis.Client, error) {
+	// 	dbURL := os.Getenv("INFLUXDB_URL")
+	// 	if dbURL == "" {
+	// 		return nil, errors.New("INFLUXDB_URL must be set")
+	// 	}
+	
+	// 	client := influxdb2.NewClient(dbURL, dbToken)
+	
+	// 	// validate client connection health
+	// 	_, err := client.Health(context.Background())
+	
+	// 	return client, err
+	// }
+	
+func initClients() (*client.Client, *redis.Client, influxdb2.Client, error) {
 	// Create a new Docker client
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		return nil, nil, fmt.Errorf("creating Docker client: %w", err)
+		return nil, nil, nil, fmt.Errorf("creating Docker client: %w", err)
 	}
 
 	redisClient := redis.NewClient(&redis.Options{
@@ -80,8 +104,13 @@ func initClients() (*client.Client, *redis.Client, error) {
 		Password: "",
 		DB:       0,
 	})
+	influxdbURL:=os.Getenv("INFLUXDB_URL")
+	dbToken:=os.Getenv("INFLUXDB_TOKEN")
 
-	return cli, redisClient, nil
+	//print influxdbURL and dbToken
+
+	influxClient := influxdb2.NewClient(influxdbURL, dbToken)
+    return cli, redisClient, influxClient, nil
 }
 
 
