@@ -199,7 +199,7 @@ func startElection(node *Node, leaderChangeChan chan struct{},redisClient *redis
 	}
 
 	for i := 1; i <= 3; i++ {
-		err := sendMonitorUpdate("go-monitor-"+strconv.Itoa(3), "http://go-loadbalancer-"+strconv.Itoa(i)+":5000/monitor")
+		err := sendMonitorUpdate("go-monitor-"+strconv.Itoa(node.ID), "http://go-loadbalancer-"+strconv.Itoa(i)+":5000/monitor")
 		if err != nil {
 			log.Fatalf("Failed to send monitor update: %v", err)
 		}
