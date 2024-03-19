@@ -67,6 +67,7 @@ func CreateAdminServer(gtw *Gateway) *gin.Engine {
 		gtw.monitorUrl = monitor.Url
 		c.JSON(http.StatusOK, nil)
 	})
+
 	r.GET("/monitor", func(c *gin.Context) {
 		c.String(http.StatusOK, gtw.monitorUrl)
 	})

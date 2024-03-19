@@ -17,7 +17,7 @@ To better understand the assumptions and the design of the system, please refer 
 - Check alive servers every 10 seconds.
 - Retry disconnected servers every 30 seconds.
 - Retry a request 3 times if failed and retry 3 times to pick a different server.
-- Report dead servers to the primary monitor every 10 seconds.
+- Report dead servers to the primary monitor every 60 seconds.
 
 ### Application
 
