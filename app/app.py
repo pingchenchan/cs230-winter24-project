@@ -93,7 +93,7 @@ kafka_topic = os.getenv('KAFKA_TOPIC', 'server_test')
 producer = KafkaProducer(bootstrap_servers=[kafka_broker],value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
 # Progress of data collection
-progress = {"status": "idle", "cpu_usage": 0, "memory_usage": 0,"throughput": 0,"health": "unknown", "message": ""}
+progress = {"status": "idle", "cpu_usage": 0, "memory_usage": 0,"throughput": 0,"health": "healthy", "message": ""}
 stop_collect_flag = True
 
 
@@ -109,7 +109,8 @@ def collect_and_send_data1():
             cpu_usage += random.randint(1, 5)
         memory_usage= random.randint(10, 80)
         throughput = random.randint(100, 500)
-        health = "healthy" if cpu_usage < 70 else "unhealthy"
+        health = "healthy" 
+        # if cpu_usage < 70 else "unhealthy"
         # Create data point
         data_point = {
             "cpu_usage": cpu_usage,

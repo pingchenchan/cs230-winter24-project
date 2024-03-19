@@ -425,6 +425,8 @@ func addAppToLB(LBurl string, addedAppUrl string) error {
     if resp.StatusCode != http.StatusOK {
         return fmt.Errorf("received non-OK response: %s", resp.Status)
     }
+	//print the response
+	fmt.Printf("addAppToLB received resp message: %v\n", resp.Status)
 
     return nil
 }
