@@ -146,6 +146,7 @@ The monitoring system uses Redis as a database, which can be used to store and q
 - `GET /health_check`: Return ok if the load balancer is alive.
 - `GET /servers`: Return alive servers' address.
 - `PUT /servers`: Add new servers and/or delete old servers.
+- `GET /monitor`: Get current primary monitor address.
 - `PUT /monitor`: Update primary monitor address.
 - `GET /monitor`: Return current primary monitor address.
 ### Application
