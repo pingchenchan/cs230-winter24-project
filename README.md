@@ -22,7 +22,7 @@ To better understand the assumptions and the design of the system, please refer 
 ### Application
 
 - Send the system data to Kafka every second. (ex:cpu usage, memory usage, throughput, health status)
-- Simulate 3 types of situations. (ex: high cpu usage, low cpu usage, scale down)
+- Simulate 2 types of situations. (ex: high cpu usage, low cpu usage)
 - Provide a web to show the real-time updated data
 - Provide a RESTful endpoint to fetch the health status of the applications.
 
@@ -116,13 +116,11 @@ The dead pool is reported every 60 seconds by yet another goroutine. If the repo
 
 ### Application
 
-Three servers are set up for operation. Initially, one must open a browser and enter the IP address of each server. On accessing these servers, three buttons labeled 'High CPU Usage', 'Low CPU Usage', and 'Scale Down' are presented.
+Three servers are set up for operation. Initially, one must open a browser and enter the IP address of each server. On accessing these servers, two buttons labeled 'High CPU Usage'and 'Low CPU Usage' are presented.
 
 High CPU Usage: On selecting this option, CPU usage starts at 0% and increases gradually. Once it exceeds 70%, it remains within the range of 70% to 75%, simulating a high CPU usage scenario. Once 
 
-Low CPU Usage: Upon selection, CPU usage begins at 0% and slightly increases. After exceeding 20%, it stabilizes between 20% to 30%, never surpassing 30%. This simulates a low CPU usage condition.
-
-Scale Down: Choosing this option initiates CPU usage at 50%, which then gradually decreases. Once it falls below 10%, it stays within 1% to 10%, simulating a scale-down in resource utilization.
+Low CPU Usage: Choosing this option initiates CPU usage at 50%, which then gradually decreases. Once it falls below 10%, it stays within 1% to 10%, simulating a scale-down in resource utilization.
 
 All system data is sent to Kafka, which organizes the data into different topics. Telegraf then consumes this data and writes it into InfluxDB for storage and analysis.
 
