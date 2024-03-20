@@ -152,7 +152,6 @@ The monitoring system uses Redis as a database, which can be used to store and q
 - `GET /health_check`: Return ok if the application is alive.
 
 ### Monitor
-- `GET /containers`: Returns a JSON list of all running container IDs.
 - `PUT /report`: Update dead servers reported from a load balancer.
 
 ## Future Works
