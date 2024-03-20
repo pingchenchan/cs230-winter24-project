@@ -147,7 +147,7 @@ The monitoring system uses Redis as a database, which can be used to store and q
 - `GET /servers`: Return alive servers' address.
 - `PUT /servers`: Add new servers and/or delete old servers.
 - `PUT /monitor`: Update primary monitor address.
-
+- `GET /monitor`: Return current primary monitor address.
 ### Application
 - `GET /health_check`: Return ok if the application is alive.
 
