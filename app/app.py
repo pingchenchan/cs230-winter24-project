@@ -72,11 +72,10 @@ def home():
     <body>
         <h1 id="kafka_topic">This is </h1>
         <button onclick="startDataCollection1()">High CPU Usage</button>
-        <button onclick="startDataCollection2()">Low CPU Usage</button>
-        <button onclick="startDataCollection3()">Scale Down</button>
+        <button onclick="startDataCollection3()">Low CPU Usage</button>
         <button onclick="stopDataCollection()">Stop Data Collection</button>
         <p id="status">Status: idle</p>
-        <p id="cpu_usage">CPU Usage: 0%</p>
+        <p id="cpu_usage">CPU Usage: 50%</p>
         <p id="memory_usage">Memory Usage: 0%</p>
         <p id="throughput">Throughput: 0 mbps</p>
         <p id="health">Health: unknown</p>
